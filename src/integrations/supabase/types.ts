@@ -14,7 +14,285 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      followers: {
+        Row: {
+          created_at: string
+          followee_id: string
+          follower_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          followee_id: string
+          follower_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          followee_id?: string
+          follower_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      gem_photos: {
+        Row: {
+          created_at: string
+          display_order: number
+          gem_id: string
+          id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          gem_id: string
+          id?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          gem_id?: string
+          id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gem_photos_gem_id_fkey"
+            columns: ["gem_id"]
+            isOneToOne: false
+            referencedRelation: "gems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gems: {
+        Row: {
+          category: string
+          city: string
+          country: string
+          created_at: string
+          description: string | null
+          id: string
+          is_approved: boolean
+          latitude: number | null
+          longitude: number | null
+          name: string
+          opening_hours: string | null
+          submitted_by: string
+          tips: string | null
+          updated_at: string
+          why_special: string | null
+        }
+        Insert: {
+          category: string
+          city: string
+          country: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_approved?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          opening_hours?: string | null
+          submitted_by: string
+          tips?: string | null
+          updated_at?: string
+          why_special?: string | null
+        }
+        Update: {
+          category?: string
+          city?: string
+          country?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_approved?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          opening_hours?: string | null
+          submitted_by?: string
+          tips?: string | null
+          updated_at?: string
+          why_special?: string | null
+        }
+        Relationships: []
+      }
+      list_items: {
+        Row: {
+          created_at: string
+          gem_id: string
+          id: string
+          list_id: string
+        }
+        Insert: {
+          created_at?: string
+          gem_id: string
+          id?: string
+          list_id: string
+        }
+        Update: {
+          created_at?: string
+          gem_id?: string
+          id?: string
+          list_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "list_items_gem_id_fkey"
+            columns: ["gem_id"]
+            isOneToOne: false
+            referencedRelation: "gems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "list_items_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lists: {
+        Row: {
+          created_at: string
+          description: string | null
+          emoji: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          country: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          region: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          country?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          region?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          country?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          region?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          created_at: string
+          gem_id: string
+          id: string
+          rating: number
+          text: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gem_id: string
+          id?: string
+          rating: number
+          text?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gem_id?: string
+          id?: string
+          rating?: number
+          text?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_gem_id_fkey"
+            columns: ["gem_id"]
+            isOneToOne: false
+            referencedRelation: "gems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saves: {
+        Row: {
+          created_at: string
+          gem_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gem_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gem_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saves_gem_id_fkey"
+            columns: ["gem_id"]
+            isOneToOne: false
+            referencedRelation: "gems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
