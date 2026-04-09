@@ -25,7 +25,7 @@ const Auth = () => {
         navigate("/");
       }
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -35,6 +35,9 @@ const Auth = () => {
       });
       if (error) {
         toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
+      } else if (data.session) {
+        toast({ title: "Welcome to Hidden Gems! 💎" });
+        navigate("/");
       } else {
         toast({ title: "Check your email!", description: "We sent you a confirmation link." });
       }
