@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,9 +12,12 @@ import AddGem from "./pages/AddGem";
 import SavedLists from "./pages/SavedLists";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const hasOnboarded = () => localStorage.getItem("hg_onboarded") === "1";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -24,7 +27,8 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/welcome" element={hasOnboarded() ? <Navigate to="/" replace /> : <Onboarding />} />
+            <Route path="/" element={hasOnboarded() ? <Home /> : <Navigate to="/welcome" replace />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/gem/:id" element={<GemDetail />} />
             <Route path="/add" element={<AddGem />} />
