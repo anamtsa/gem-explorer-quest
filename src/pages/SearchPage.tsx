@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Search, SlidersHorizontal, MapPin, List, Map } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import GemCard from "@/components/GemCard";
+import GemMap from "@/components/GemMap";
 import CategoryPills from "@/components/CategoryPills";
 import { useGems } from "@/hooks/useGems";
 import type { Category } from "@/data/mockGems";
@@ -68,11 +69,8 @@ const SearchPage = () => {
             )}
           </div>
         ) : (
-          <div className="mt-4 flex h-[60vh] items-center justify-center rounded-2xl bg-secondary">
-            <div className="text-center">
-              <Map className="mx-auto h-12 w-12 text-muted-foreground/40" />
-              <p className="mt-3 text-sm text-muted-foreground">Interactive map coming soon!</p>
-            </div>
+          <div className="mt-4">
+            <GemMap gems={results} />
           </div>
         )}
       </main>
