@@ -27,7 +27,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/welcome" element={<Onboarding />} />
+            <Route path="/welcome" element={hasOnboarded() ? <Navigate to="/" replace /> : <Onboarding />} />
             <Route path="/" element={hasOnboarded() ? <Home /> : <Navigate to="/welcome" replace />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/gem/:id" element={<GemDetail />} />
