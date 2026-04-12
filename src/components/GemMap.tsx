@@ -38,10 +38,13 @@ const createCategoryIcon = (category: string) => {
   });
 };
 
-// Auto-fit bounds when gems change
+// Invalidate size + auto-fit bounds when gems change
 const FitBounds = ({ gems }: { gems: GemWithPhotos[] }) => {
   const map = useMap();
   useEffect(() => {
+    // Fix for Leaflet containers that start hidden
+    setTimeout(() => map.invalidateSize(), 100);
+
     const withCoords = gems.filter((g) => g.latitude && g.longitude);
     if (withCoords.length === 0) return;
     const bounds = L.latLngBounds(
