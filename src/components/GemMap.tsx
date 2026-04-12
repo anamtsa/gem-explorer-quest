@@ -1,22 +1,19 @@
-import { useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useNavigate } from "react-router-dom";
-import { Star } from "lucide-react";
 import type { GemWithPhotos } from "@/hooks/useGems";
 import { getAvgRating, getPrimaryPhoto } from "@/hooks/useGems";
 
-// Category → color mapping using our design tokens (HSL → hex approximations)
 const categoryColors: Record<string, string> = {
-  cafe: "#C17F59",    // warm brown
-  nature: "#4D9E7B",  // emerald
-  culture: "#7B6DAF",  // purple
-  market: "#D4853B",  // orange
-  viewpoint: "#4A9DC9", // sky blue
-  beach: "#E8A54B",   // sandy gold
-  park: "#5AAF6E",    // green
-  museum: "#C25D7C",  // rose
+  cafe: "#C17F59",
+  nature: "#4D9E7B",
+  culture: "#7B6DAF",
+  market: "#D4853B",
+  viewpoint: "#4A9DC9",
+  beach: "#E8A54B",
+  park: "#5AAF6E",
+  museum: "#C25D7C",
 };
 
 const defaultColor = "#4D9E7B";
@@ -38,34 +35,102 @@ const createCategoryIcon = (category: string) => {
   });
 };
 
-// Invalidate size + auto-fit bounds when gems change
-const FitBounds = ({ gems }: { gems: GemWithPhotos[] }) => {
-  const map = useMap();
-  useEffect(() => {
-    // Fix for Leaflet containers that start hidden
-    setTimeout(() => map.invalidateSize(), 100);
-
-    const withCoords = gems.filter((g) => g.latitude && g.longitude);
-    if (withCoords.length === 0) return;
-    const bounds = L.latLngBounds(
-      withCoords.map((g) => [g.latitude!, g.longitude!] as [number, number])
-    );
-    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
-  }, [gems, map]);
-  return null;
-};
-
 interface GemMapProps {
   gems: GemWithPhotos[];
 }
 
 const GemMap = ({ gems }: GemMapProps) => {
   const navigate = useNavigate();
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const gemsWithCoords = useMemo(
     () => gems.filter((g) => g.latitude != null && g.longitude != null),
     [gems]
   );
+
+  useEffect(() => {
+    if (!containerRef.current || gemsWithCoords.length === 0) return;
+
+    // Initialize map if not already
+    if (!mapRef.current) {
+      mapRef.current = L.map(containerRef.current, {
+        center: [20, 0],
+        zoom: 2,
+        zoomControl: false,
+      });
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(mapRef.current);
+    }
+
+    const map = mapRef.current;
+
+    // Clear existing markers
+    map.eachLayer((layer) => {
+      if (layer instanceof L.Marker) map.removeLayer(layer);
+    });
+
+    // Add markers
+    gemsWithCoords.forEach((gem) => {
+      const avgRating = getAvgRating(gem.reviews);
+      const photo = getPrimaryPhoto(gem.gem_photos);
+      const ratingHtml =
+        avgRating > 0
+          ? `<div style="margin-top:4px;display:flex;align-items:center;gap:4px;">
+              <span style="color:#f59e0b;">★</span>
+              <span style="font-size:12px;font-weight:500;">${avgRating}</span>
+              <span style="font-size:12px;color:#888;">(${gem.reviews.length})</span>
+             </div>`
+          : "";
+
+      const popupContent = `
+        <div class="gem-popup-inner" style="cursor:pointer;min-width:200px;">
+          <img src="${photo}" alt="${gem.name}" style="width:100%;height:112px;object-fit:cover;border-radius:8px;" />
+          <div style="margin-top:8px;">
+            <div style="font-size:14px;font-weight:600;line-height:1.3;">${gem.name}</div>
+            <div style="font-size:12px;color:#888;margin-top:2px;">${gem.city}, ${gem.country}</div>
+            ${ratingHtml}
+            <span style="display:inline-block;margin-top:4px;background:#f1f0ee;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:500;text-transform:capitalize;">${gem.category}</span>
+          </div>
+        </div>`;
+
+      const marker = L.marker([gem.latitude!, gem.longitude!], {
+        icon: createCategoryIcon(gem.category),
+      }).addTo(map);
+
+      marker.bindPopup(popupContent, {
+        className: "gem-popup",
+        minWidth: 220,
+        maxWidth: 260,
+      });
+
+      marker.on("popupopen", () => {
+        const el = document.querySelector(".gem-popup-inner");
+        el?.addEventListener("click", () => navigate(`/gem/${gem.id}`));
+      });
+    });
+
+    // Fit bounds
+    const bounds = L.latLngBounds(
+      gemsWithCoords.map((g) => [g.latitude!, g.longitude!] as [number, number])
+    );
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+
+    // Invalidate size after render
+    setTimeout(() => map.invalidateSize(), 100);
+  }, [gemsWithCoords, navigate]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
 
   if (gemsWithCoords.length === 0) {
     return (
@@ -77,64 +142,7 @@ const GemMap = ({ gems }: GemMapProps) => {
 
   return (
     <div className="h-[60vh] overflow-hidden rounded-2xl border border-border">
-      <MapContainer
-        center={[20, 0]}
-        zoom={2}
-        className="h-full w-full"
-        zoomControl={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <FitBounds gems={gemsWithCoords} />
-        {gemsWithCoords.map((gem) => {
-          const avgRating = getAvgRating(gem.reviews);
-          const photo = getPrimaryPhoto(gem.gem_photos);
-          return (
-            <Marker
-              key={gem.id}
-              position={[gem.latitude!, gem.longitude!]}
-              icon={createCategoryIcon(gem.category)}
-            >
-              <Popup className="gem-popup" minWidth={220} maxWidth={260}>
-                <div
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/gem/${gem.id}`)}
-                >
-                  <img
-                    src={photo}
-                    alt={gem.name}
-                    className="h-28 w-full rounded-lg object-cover"
-                  />
-                  <div className="mt-2">
-                    <h3 className="text-sm font-semibold text-foreground leading-tight">
-                      {gem.name}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {gem.city}, {gem.country}
-                    </p>
-                    <div className="mt-1 flex items-center gap-1">
-                      {avgRating > 0 && (
-                        <>
-                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                          <span className="text-xs font-medium">{avgRating}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({gem.reviews.length})
-                          </span>
-                        </>
-                      )}
-                      <span className="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium capitalize">
-                        {gem.category}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+      <div ref={containerRef} className="h-full w-full" />
     </div>
   );
 };
