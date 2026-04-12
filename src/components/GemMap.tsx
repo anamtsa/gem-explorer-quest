@@ -50,7 +50,7 @@ const GemMap = ({ gems }: GemMapProps) => {
   );
 
   useEffect(() => {
-    if (!containerRef.current || gemsWithCoords.length === 0) return;
+    if (!containerRef.current) return;
 
     // Initialize map if not already
     if (!mapRef.current) {
@@ -71,6 +71,12 @@ const GemMap = ({ gems }: GemMapProps) => {
     map.eachLayer((layer) => {
       if (layer instanceof L.Marker) map.removeLayer(layer);
     });
+
+    if (gemsWithCoords.length === 0) {
+      map.setView([20, 0], 2);
+      setTimeout(() => map.invalidateSize(), 100);
+      return;
+    }
 
     // Add markers
     gemsWithCoords.forEach((gem) => {
@@ -118,7 +124,6 @@ const GemMap = ({ gems }: GemMapProps) => {
     );
     map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
 
-    // Invalidate size after render
     setTimeout(() => map.invalidateSize(), 100);
   }, [gemsWithCoords, navigate]);
 
@@ -132,17 +137,14 @@ const GemMap = ({ gems }: GemMapProps) => {
     };
   }, []);
 
-  if (gemsWithCoords.length === 0) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center rounded-2xl bg-secondary">
-        <p className="text-sm text-muted-foreground">No gems with location data to show on the map.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-[60vh] overflow-hidden rounded-2xl border border-border">
+    <div className="relative h-[60vh] overflow-hidden rounded-2xl border border-border">
       <div ref={containerRef} className="h-full w-full" />
+      {gemsWithCoords.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center bg-secondary/80 backdrop-blur-sm">
+          <p className="text-sm text-muted-foreground">No gems with location data to show on the map.</p>
+        </div>
+      )}
     </div>
   );
 };
