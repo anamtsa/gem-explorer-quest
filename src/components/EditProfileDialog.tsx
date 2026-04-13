@@ -105,16 +105,14 @@ const EditProfileDialog = ({ open, onOpenChange, profile }: EditProfileDialogPro
         }
       }
 
-      const updateData: Record<string, string | null> = {
+      const updateData = {
         display_name: form.display_name || null,
         username: form.username || null,
         bio: form.bio || null,
         country: form.country || null,
         region: form.region || null,
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
       };
-      if (avatarUrl) {
-        updateData.avatar_url = avatarUrl;
-      }
 
       const { error } = await supabase
         .from("profiles")
