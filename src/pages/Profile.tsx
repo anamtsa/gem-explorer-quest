@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { Settings, MapPin, Heart, Bookmark, Users, ChevronRight, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile, useUserStats } from "@/hooks/useGems";
+import EditProfileDialog from "@/components/EditProfileDialog";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { data: profile } = useUserProfile();
   const { data: stats } = useUserStats();
+  const [editOpen, setEditOpen] = useState(false);
 
   if (!user) {
     return (
@@ -39,7 +42,7 @@ const Profile = () => {
   ];
 
   const menuItems = [
-    { label: "Edit Profile", icon: Settings },
+    { label: "Edit Profile", icon: Settings, action: () => setEditOpen(true) },
     { label: "My Submissions", icon: MapPin },
     { label: "Notifications", icon: Heart },
     { label: "Settings", icon: Settings },
@@ -55,7 +58,7 @@ const Profile = () => {
       <header className="sticky top-0 z-40 glass-card px-4 py-3">
         <div className="mx-auto flex max-w-lg items-center justify-between">
           <h1 className="font-semibold">Profile</h1>
-          <button className="rounded-full p-1.5 hover:bg-muted">
+          <button onClick={() => setEditOpen(true)} className="rounded-full p-1.5 hover:bg-muted">
             <Settings className="h-5 w-5" />
           </button>
         </div>
@@ -63,9 +66,13 @@ const Profile = () => {
 
       <main className="mx-auto max-w-lg px-4 pt-6">
         <div className="animate-fade-in rounded-2xl bg-card p-6 text-center shadow-sm">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full gem-gradient text-3xl font-bold text-primary-foreground">
-            {initials}
-          </div>
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt={displayName} className="mx-auto h-20 w-20 rounded-full object-cover" />
+          ) : (
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full gem-gradient text-3xl font-bold text-primary-foreground">
+              {initials}
+            </div>
+          )}
           <h2 className="mt-3 text-lg font-bold text-card-foreground">{displayName}</h2>
           {profile?.username && <p className="text-sm text-muted-foreground">@{profile.username}</p>}
           {profile?.bio && <p className="mt-2 text-xs text-muted-foreground">{profile.bio}</p>}
@@ -75,6 +82,7 @@ const Profile = () => {
               {profile.region ? `${profile.region}, ` : ""}{profile.country}
             </div>
           )}
+          <p className="mt-1 text-[10px] text-muted-foreground">{user.email}</p>
         </div>
 
         <div className="mt-4 grid grid-cols-4 gap-2">
@@ -88,8 +96,8 @@ const Profile = () => {
         </div>
 
         <div className="mt-6 space-y-2">
-          {menuItems.map(({ label, icon: Icon }) => (
-            <button key={label} className="flex w-full items-center gap-3 rounded-xl bg-card px-4 py-3.5 shadow-sm transition-all hover:shadow-md text-left">
+          {menuItems.map(({ label, icon: Icon, action }) => (
+            <button key={label} onClick={action} className="flex w-full items-center gap-3 rounded-xl bg-card px-4 py-3.5 shadow-sm transition-all hover:shadow-md text-left">
               <Icon className="h-5 w-5 text-primary" />
               <span className="flex-1 text-sm font-medium text-card-foreground">{label}</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -101,6 +109,8 @@ const Profile = () => {
           </button>
         </div>
       </main>
+
+      <EditProfileDialog open={editOpen} onOpenChange={setEditOpen} profile={profile ?? null} />
     </div>
   );
 };
