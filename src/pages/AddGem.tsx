@@ -18,6 +18,8 @@ const AddGem = () => {
   const [description, setDescription] = useState("");
   const [whySpecial, setWhySpecial] = useState("");
   const [tips, setTips] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
 
   const handleSubmit = () => {
     if (!user) {
