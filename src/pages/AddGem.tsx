@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Camera, MapPin, Sparkles } from "lucide-react";
+import { ArrowLeft, Camera, Crosshair, Loader2, MapPin, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { categories } from "@/data/mockGems";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,28 @@ const AddGem = () => {
   const [tips, setTips] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  const [locating, setLocating] = useState(false);
+
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Geolocation not supported", variant: "destructive" });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLatitude(pos.coords.latitude.toFixed(6));
+        setLongitude(pos.coords.longitude.toFixed(6));
+        setLocating(false);
+        toast({ title: "Location set! 📍" });
+      },
+      (err) => {
+        setLocating(false);
+        toast({ title: "Could not get location", description: err.message, variant: "destructive" });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const handleSubmit = () => {
     if (!user) {
@@ -153,6 +175,15 @@ const AddGem = () => {
               className={inputClass}
             />
           </div>
+          <button
+            type="button"
+            onClick={handleUseMyLocation}
+            disabled={locating}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+          >
+            {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />}
+            {locating ? "Getting location…" : "Use my current location"}
+          </button>
           <p className="mt-1 text-[10px] text-muted-foreground">Optional — helps your gem appear on the map</p>
         </div>
 
