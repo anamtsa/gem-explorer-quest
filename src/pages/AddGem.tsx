@@ -1,16 +1,22 @@
-import { useState } from "react";
-import { ArrowLeft, Camera, Crosshair, Loader2, MapPin, Sparkles } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowLeft, Camera, Crosshair, Loader2, Sparkles, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { categories } from "@/data/mockGems";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubmitGem } from "@/hooks/useGems";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+const MAX_PHOTOS = 5;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const AddGem = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const submitGem = useSubmitGem();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
@@ -21,6 +27,9 @@ const AddGem = () => {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [locating, setLocating] = useState(false);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
@@ -43,7 +52,59 @@ const AddGem = () => {
     );
   };
 
-  const handleSubmit = () => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const remaining = MAX_PHOTOS - photos.length;
+    const validFiles = files.filter((f) => {
+      if (!f.type.startsWith("image/")) {
+        toast({ title: `${f.name} is not an image`, variant: "destructive" });
+        return false;
+      }
+      if (f.size > MAX_FILE_SIZE) {
+        toast({ title: `${f.name} exceeds 5MB limit`, variant: "destructive" });
+        return false;
+      }
+      return true;
+    }).slice(0, remaining);
+
+    if (files.length > remaining) {
+      toast({ title: `Maximum ${MAX_PHOTOS} photos allowed` });
+    }
+
+    setPhotos((prev) => [...prev, ...validFiles]);
+    setPhotoPreviews((prev) => [...prev, ...validFiles.map((f) => URL.createObjectURL(f))]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removePhoto = (index: number) => {
+    URL.revokeObjectURL(photoPreviews[index]);
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadPhotos = async (gemId: string): Promise<void> => {
+    for (let i = 0; i < photos.length; i++) {
+      const file = photos[i];
+      const ext = file.name.split(".").pop() || "jpg";
+      const filePath = `${gemId}/${i}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("gem-photos")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from("gem-photos").getPublicUrl(filePath);
+
+      const { error: insertError } = await supabase
+        .from("gem_photos")
+        .insert({ gem_id: gemId, url: data.publicUrl, display_order: i });
+
+      if (insertError) throw insertError;
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!user) {
       navigate("/auth");
       return;
@@ -52,8 +113,10 @@ const AddGem = () => {
       toast({ title: "Please fill in required fields", variant: "destructive" });
       return;
     }
-    submitGem.mutate(
-      {
+
+    setSubmitting(true);
+    try {
+      const gemData = {
         name,
         city,
         country,
@@ -64,15 +127,22 @@ const AddGem = () => {
         latitude: latitude ? parseFloat(latitude) : undefined,
         longitude: longitude ? parseFloat(longitude) : undefined,
         submitted_by: user.id,
-      },
-      {
-        onSuccess: () => {
-          toast({ title: "Gem submitted! 💎", description: "It will be reviewed and published soon." });
-          navigate("/");
-        },
-        onError: (e) => toast({ title: "Error submitting gem", description: e.message, variant: "destructive" }),
+      };
+
+      const { data: gem, error } = await supabase.from("gems").insert(gemData).select().single();
+      if (error) throw error;
+
+      if (photos.length > 0) {
+        await uploadPhotos(gem.id);
       }
-    );
+
+      toast({ title: "Gem submitted! 💎", description: "It will be reviewed and published soon." });
+      navigate("/");
+    } catch (e: any) {
+      toast({ title: "Error submitting gem", description: e.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputClass =
@@ -99,10 +169,53 @@ const AddGem = () => {
           </div>
         )}
 
-        <button className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-secondary/50 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-secondary">
-          <Camera className="h-8 w-8" />
-          <span className="text-sm">Add Photos</span>
-        </button>
+        {/* Photo upload area */}
+        <div>
+          {photoPreviews.length > 0 ? (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {photoPreviews.map((src, i) => (
+                <div key={i} className="relative flex-shrink-0">
+                  <img src={src} alt={`Photo ${i + 1}`} className="h-32 w-32 rounded-xl object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(i)}
+                    className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex h-32 w-32 flex-shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border bg-secondary/50 text-muted-foreground hover:border-primary/30"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span className="text-[10px]">Add more</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex h-40 w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-secondary/50 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-secondary"
+            >
+              <Camera className="h-8 w-8" />
+              <span className="text-sm">Add Photos</span>
+              <span className="text-[10px]">Up to {MAX_PHOTOS} images, 5MB each</span>
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handlePhotoSelect}
+          />
+        </div>
 
         <div>
           <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Name *</label>
@@ -189,10 +302,10 @@ const AddGem = () => {
 
         <button
           onClick={handleSubmit}
-          disabled={submitGem.isPending}
+          disabled={submitting}
           className="w-full gem-gradient rounded-full py-3.5 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02] disabled:opacity-50"
         >
-          {submitGem.isPending ? "Submitting..." : "Submit Gem for Review 💎"}
+          {submitting ? "Submitting..." : "Submit Gem for Review 💎"}
         </button>
       </main>
     </div>
