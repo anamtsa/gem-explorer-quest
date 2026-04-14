@@ -71,6 +71,8 @@ export const useSubmitGem = () => {
       description?: string;
       why_special?: string;
       tips?: string;
+      latitude?: number;
+      longitude?: number;
       submitted_by: string;
     }) => {
       const { data, error } = await supabase.from("gems").insert(gem).select().single();

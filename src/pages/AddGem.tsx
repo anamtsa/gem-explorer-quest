@@ -18,6 +18,8 @@ const AddGem = () => {
   const [description, setDescription] = useState("");
   const [whySpecial, setWhySpecial] = useState("");
   const [tips, setTips] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
 
   const handleSubmit = () => {
     if (!user) {
@@ -37,6 +39,8 @@ const AddGem = () => {
         description: description || undefined,
         why_special: whySpecial || undefined,
         tips: tips || undefined,
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
         submitted_by: user.id,
       },
       {
@@ -131,10 +135,25 @@ const AddGem = () => {
 
         <div>
           <label className="mb-1.5 block text-xs font-medium text-muted-foreground">📍 Location</label>
-          <button className="flex w-full items-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            Tap to set coordinates on map
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              placeholder="Latitude (e.g. 41.8967)"
+              type="number"
+              step="any"
+              className={inputClass}
+            />
+            <input
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              placeholder="Longitude (e.g. 12.4822)"
+              type="number"
+              step="any"
+              className={inputClass}
+            />
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Optional — helps your gem appear on the map</p>
         </div>
 
         <button
